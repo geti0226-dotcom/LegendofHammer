@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>레전드 of 망치 - 최종 수정본</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Malgun Gothic', sans-serif;
+            user-select: none;
+            background-color: #111;
+        }
+        /* 시작 화면 (메인 메뉴) */
+        #main-menu {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1b1b2f, #162447);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            color: white;
+        }
+        #main-menu h1 {
+            font-size: 48px;
+            color: #f1c40f;
+            margin-bottom: 10px;
+            text-shadow: 3px 3px 10px rgba(0,0,0,0.8);
+        }
+        #main-menu p {
+            font-size: 18px;
+            color: #ccc;
+            margin-bottom: 40px;
+        }
+        .menu-btn {
+            background: #e67e22;
+            color: white;
+            border: none;
+            padding: 16px 40px;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            margin: 10px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+            transition: all 0.2s;
+        }
+        .menu-btn:hover {
+            background: #d35400;
+            transform: scale(1.05);
+        }
+
+        /* 게임 내부 UI */
+        #game-ui {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+        #title-banner {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #f1c40f;
+            font-size: 26px;
+            font-weight: 900;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.9);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 20px;
+            border-radius: 20px;
+            border: 2px solid #e67e22;
+        }
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 12px;
+            pointer-events: none;
+            border: 2px solid #555;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .ui-row {
+            margin-bottom: 8px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        #shop-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px 20px;
+            border-radius: 12px;
+            border: 2px solid #555;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            pointer-events: auto;
+        }
+        .game-action-btn {
+            background: #e67e22;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .game-action-btn:hover { background: #d35400; transform: translateY(-2px); }
+        
+        #guide {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: #ddd;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 13px;
+            border: 2px solid #555;
+            line-height: 1.6;
+            width: 290px;
+        }
+        #notification {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #f1c40f;
+            font-size: 28px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            pointer-events: none;
+            transition: opacity 0.5s;
+            opacity: 0;
+            text-align: center;
+        }
+    </style>
+    <!-- Three.js 라이브러리 로드 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+    <!-- 게임 시작 화면 -->
+    <div id="main-menu">
+        <h1>🔨 레전드 of 망치</h1>
+        <p>[QUEST AREA] 파괴 > 재화 획득 > 강화 시뮬레이터</p>
+        <button class="menu-btn" id="start-btn">게임 시작</button>
+        <button class="menu-btn" id="guide-btn" style="background:#3498db;">게임 설정 / 가이드</button>
+    </div>
+
+    <!-- 게임 플레이 UI -->
+    <div id="game-ui">
+        <div id="title-banner">🔨 레전드 of 망치 [QUEST AREA]</div>
+        <div id="notification"></div>
+        
+        <div id="ui-container">
+            <div class="ui-row" style="color: #2ecc71;">❤️ 체력: <span id="player-hp">100</span> / 100</div>
+            <div class="ui-row">💰 골드: <span id="gold">0</span> G</div>
+            <div class="ui-row">🎒 가방: <span id="bag">0</span> / <span id="bag-max">10</span></div>
+            <div class="ui-row">⚡ 공격력: <span id="dmg">10</span></div>
+            <div class="ui-row" style="color: #e74c3c;"><span id="target-title">대상 HP</span>: <span id="hp">30</span> / <span id="hp-max">30</span></div>
+        </div>
+
+        <div id="guide">
+            <h3 style="margin-top:0; color:#f1c40f;">📖 플레이 가이드</h3>
+            <b>1. 조작 방법</b><br>
+            - 이동: <b style="color:#3498db;">S(앞), W(뒤), A(좌), D(우)</b><br>
+            - 점프: <b style="color:#2ecc71;">Space 바</b><br>
+            - 시점: 우클릭 드래그 / 공격: 좌클릭<br><br>
+            <b>2. 콘텐츠 안내</b><br>
+            - <b>상자 모델링</b>: 상자 ➔ 항아리 ➔ 금고 3단계[cite: 1]<br>
+            - <b>적 모델링</b>: 슬라임 ➔ 고블린 ➔ 유령
+        </div>
+
+        <div id="shop-panel">
+            <button class="game-action-btn" id="hammer-btn">망치 강화 (100G)</button>
+            <button class="game-action-btn" id="bag-btn">가방 확장 (150G)</button>
+        </div>
+    </div>
+
+    <script>
+        let gameStarted = false;
+
+        let audioCtx = null;
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playHitSound() {
+            initAudio();
+            if (!audioCtx) return;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.15);
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.15);
+        }
+
+        function playSuccessSound() {
+            initAudio();
+            if (!audioCtx) return;
+            let now = audioCtx.currentTime;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(300, now);
+            osc.frequency.setValueAtTime(450, now + 0.1);
+            osc.frequency.setValueAtTime(600, now + 0.2);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.35);
+        }
+
+        function playBuySound() {
+            initAudio();
+            if (!audioCtx) return;
+            let now = audioCtx.currentTime;
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(500, now);
+            osc.frequency.setValueAtTime(800, now + 0.15);
+            gain.gain.setValueAtTime(0.2, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.3);
+        }
+
+        function showNotification(text) {
+            const notif = document.getElementById("notification");
+            notif.innerText = text;
+            notif.style.opacity = "1";
+            setTimeout(() => { notif.style.opacity = "0"; }, 1500);
+        }
+
+        // --- 게임 시작 버튼 이벤트 리스너 ---
+        document.getElementById("start-btn").addEventListener("click", () => {
+            initAudio();
+            document.getElementById("main-menu").style.display = "none";
+            document.getElementById("game-ui").style.display = "block";
+            gameStarted = true;
+        });
+
+        document.getElementById("guide-btn").addEventListener("click", () => {
+            alert('조작법: S(앞으로), W(뒤로), A, D 이동 / Space(점프) / 우클릭 드래그 시점 회전 / 좌클릭 공격');
+        });
+
+        // --- 게임 데이터 변수 ---
+        let playerHp = 100;
+        let gold = 0;
+        let bagCount = 0;
+        let bagMax = 10;
+        let hammerDamage = 10;
+        let hammerLevel = 1;
+        let hammerCost = 100;
+        let bagLevel = 1;
+        let bagCost = 150;
+
+        let playerVelocityY = 0;
+        let isJumping = false;
+        let gravity = 0.015;
+
+        // --- Three.js 3D 환경 구축 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xb0e0e6);
+        scene.fog = new THREE.FogExp2(0xb0e0e6, 0.008);
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+        const dirLight = new THREE.DirectionalLight(0xfffaed, 0.9);
+        dirLight.position.set(50, 80, 50);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // 구름
+        const cloudGroup = new THREE.Group();
+        const cloudMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1 });
+        for (let i = 0; i < 15; i++) {
+            let cloudPiece = new THREE.Mesh(new THREE.DodecahedronGeometry(Math.random() * 6 + 4), cloudMat);
+            cloudPiece.position.set((Math.random() - 0.5) * 250, Math.random() * 20 + 40, (Math.random() - 0.5) * 250);
+            cloudGroup.add(cloudPiece);
+        }
+        scene.add(cloudGroup);
+
+        // 바닥 및 상점
+        const floorGeo = new THREE.PlaneGeometry(200, 200);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x8b7355, roughness: 0.9 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        const shopBuildingGeo = new THREE.BoxGeometry(20, 12, 12);
+        const shopBuildingMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c });
+        const shopBuilding = new THREE.Mesh(shopBuildingGeo, shopBuildingMat);
+        shopBuilding.position.set(0, 6, -30);
+        scene.add(shopBuilding);
+
+        const roofGeo = new THREE.ConeGeometry(15, 6, 4);
+        const roofMat = new THREE.MeshStandardMaterial({ color: 0xa52a2a });
+        const roof = new THREE.Mesh(roofGeo, roofMat);
+        roof.position.set(0, 15, -30);
+        roof.rotation.y = Math.PI / 4;
+        scene.add(roof);
+
+        const sellGeo = new THREE.BoxGeometry(8, 0.4, 4);
+        const sellMat = new THREE.MeshStandardMaterial({ color: 0x3498db, emissive: 0x2980b9, emissiveIntensity: 0.4 });
+        const sellZone = new THREE.Mesh(sellGeo, sellMat);
+        sellZone.position.set(0, 0.2, -18);
+        scene.add(sellZone);
+
+        // --- 플레이어 캐릭터 ---
+        const playerGroup = new THREE.Group();
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.4, 0.6), new THREE.MeshStandardMaterial({ color: 0x1abc9c }));
+        torso.position.y = 1.7; playerGroup.add(torso);
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0xffdbac }));
+        head.position.y = 2.6; playerGroup.add(head);
+        const hat = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.2, 0.9), new THREE.MeshStandardMaterial({ color: 0xd35400 }));
+        hat.position.y = 3.05; playerGroup.add(hat);
+        const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.3, 0.35), new THREE.MeshStandardMaterial({ color: 0x16a085 }));
+        leftArm.position.set(-0.7, 1.7, 0); playerGroup.add(leftArm);
+        const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 1.3, 0.35), new THREE.MeshStandardMaterial({ color: 0x16a085 }));
+        rightArm.position.set(0.7, 1.7, 0); playerGroup.add(rightArm);
+        const leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.3, 0.4), new THREE.MeshStandardMaterial({ color: 0x34495e }));
+        leftLeg.position.set(-0.25, 0.65, 0); playerGroup.add(leftLeg);
+        const rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.3, 0.4), new THREE.MeshStandardMaterial({ color: 0x34495e }));
+        rightLeg.position.set(0.25, 0.65, 0); playerGroup.add(rightLeg);
+
+        const playerBag = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.1, 0.5), new THREE.MeshStandardMaterial({ color: 0x8b4513 }));
+        playerBag.position.set(0, 1.7, -0.45); playerGroup.add(playerBag);
+
+        const hammerGroup = new THREE.Group();
+        hammerGroup.add(new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.6), new THREE.MeshStandardMaterial({ color: 0x5c3a21 })));
+        const hammerHeadMesh = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.6, 0.6), new THREE.MeshStandardMaterial({ color: 0x7f8c8d }));
+        hammerHeadMesh.position.y = 0.8; hammerGroup.add(hammerHeadMesh);
+        hammerGroup.position.set(1.1, 1.5, 0.4); hammerGroup.rotation.z = -Math.PI / 6;
+        playerGroup.add(hammerGroup);
+
+        playerGroup.position.set(0, 0, 10);
+        scene.add(playerGroup);
+
+        // --- 상자/오브젝트 모델링 (3단계) ---
+        const objectTypes = [
+            { name: "📦 1단계: 작은 나무 상자", hp: 30, color: 0xa0522d, size: [3, 3, 3] },
+            { name: "🏺 2단계: 단단한 항아리", hp: 80, color: 0xd35400, size: [2.5, 3.5, 2.5] },
+            { name: "🔒 3단계: 황금 금고", hp: 200, color: 0xf1c40f, size: [3.5, 3.5, 3.5] }
+        ];
+        let currentObjIndex = 0;
+        let objHp = objectTypes[currentObjIndex].hp;
+        let objMaxHp = objectTypes[currentObjIndex].hp;
+
+        let activeObjectMesh = null;
+        function spawnObject() {
+            if (activeObjectMesh) scene.remove(activeObjectMesh);
+
+            let type = objectTypes[currentObjIndex];
+            let objGroup = new THREE.Group();
+
+            let geom = (currentObjIndex === 1) ? 
+                new THREE.CylinderGeometry(1.2, 0.8, type.size[1], 16) : 
+                new THREE.BoxGeometry(type.size[0], type.size[1], type.size[2]);
+
+            let mat = new THREE.MeshStandardMaterial({ color: type.color, roughness: 0.6 });
+            let mesh = new THREE.Mesh(geom, mat);
+            mesh.position.y = type.size[1] / 2;
+            objGroup.add(mesh);
+
+            objGroup.position.set((Math.random() - 0.5) * 40, 0, (Math.random() - 0.5) * 40);
+            scene.add(objGroup);
+            activeObjectMesh = objGroup;
+        }
+        spawnObject();
+
+        // --- 난이도별 적 모델링 ---
+        const monsterTypes = [
+            { name: "🟢 초급: 슬라임", hp: 50, color: 0x27ae60, speed: 0.03, type: "slime" },
+            { name: "👹 중급: 고블린", hp: 120, color: 0x8e44ad, speed: 0.05, type: "goblin" },
+            { name: "👻 고급: 유령(귀신)", hp: 300, color: 0xbdc3c7, speed: 0.06, type: "ghost" }
+        ];
+        let currentMonIndex = 0;
+        let monsterHp = monsterTypes[currentMonIndex].hp;
+        let monsterMaxHp = monsterTypes[currentMonIndex].hp;
+
+        let activeMonsterGroup = null;
+        let mHpFg = null;
+
+        function spawnMonster() {
+            if (activeMonsterGroup) scene.remove(activeMonsterGroup);
+
+            let mType = monsterTypes[currentMonIndex];
+            let mGroup = new THREE.Group();
+
+            if (mType.type === "slime") {
+                let mMesh = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), new THREE.MeshStandardMaterial({ color: mType.color, transparent: true, opacity: 0.8 }));
+                mMesh.position.y = 1.2; mGroup.add(mMesh);
+            } else if (mType.type === "goblin") {
+                let body = new THREE.Mesh(new THREE.BoxGeometry(1.0, 1.2, 0.6), new THREE.MeshStandardMaterial({ color: 0x27ae60 }));
+                body.position.y = 1.2; mGroup.add(body);
+                let head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0x2ecc71 }));
+                head.position.y = 2.2; mGroup.add(head);
+            } else if (mType.type === "ghost") {
+                let ghostBody = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2.5, 16), new THREE.MeshStandardMaterial({ color: mType.color, transparent: true, opacity: 0.6 }));
+                ghostBody.position.y = 1.5; mGroup.add(ghostBody);
+            }
+
+            let mHpBg = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 0.2), new THREE.MeshBasicMaterial({ color: 0x333333 }));
+            mHpBg.position.y = 3.2; mGroup.add(mHpBg);
+            mHpFg = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.2, 0.2), new THREE.MeshBasicMaterial({ color: 0xe74c3c }));
+            mHpFg.position.y = 3.2; mGroup.add(mHpFg);
+
+            mGroup.position.set((Math.random() - 0.5) * 50, 0, (Math.random() - 0.5) * 50);
+            scene.add(mGroup);
+            activeMonsterGroup = mGroup;
+            monsterHp = mType.hp;
+            monsterMaxHp = mType.hp;
+        }
+        spawnMonster();
+
+        // --- 마우스 시점 및 공격 제어 ---
+        let cameraAngle = 0;
+        let cameraHeight = 6;
+        let cameraDist = 12;
+        let isRightMouseDown = false;
+        let previousMousePosition = { x: 0, y: 0 };
+
+        window.addEventListener('mousedown', (e) => {
+            if (!gameStarted) return;
+            initAudio();
+
+            if (e.button === 2) {
+                isRightMouseDown = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+                e.preventDefault();
+            } else if (e.button === 0) {
+                if (e.target.tagName === 'BUTTON') return;
+
+                hammerGroup.rotation.x -= 0.6;
+                setTimeout(() => hammerGroup.rotation.x += 0.6, 120);
+
+                if (activeObjectMesh) {
+                    let distBox = playerGroup.position.distanceTo(activeObjectMesh.position);
+                    if (distBox <= 7) {
+                        if (bagCount >= bagMax) {
+                            showNotification("⚠️ 가방이 꽉 찼습니다! 판매대로 가세요.");
+                            return;
+                        }
+                        objHp -= hammerDamage;
+                        playHitSound();
+                        activeObjectMesh.scale.set(1.2, 0.8, 1.2);
+                        setTimeout(() => activeObjectMesh.scale.set(1, 1, 1), 120);
+
+                        if (objHp <= 0) {
+                            bagCount += 1;
+                            playSuccessSound();
+                            showNotification(`✨ ${objectTypes[currentObjIndex].name} 파괴 성공! (+1 파편)`);
+                            
+                            currentObjIndex = (currentObjIndex + 1) % objectTypes.length;
+                            objHp = objectTypes[currentObjIndex].hp;
+                            objMaxHp = objectTypes[currentObjIndex].hp;
+                            spawnObject();
+                        }
+                        updateUI();
+                    }
+                }
+
+                if (activeMonsterGroup) {
+                    let distMonster = playerGroup.position.distanceTo(activeMonsterGroup.position);
+                    if (distMonster <= 6) {
+                        monsterHp -= hammerDamage;
+                        playHitSound();
+                        activeMonsterGroup.scale.set(1.3, 0.7, 1.3);
+                        setTimeout(() => activeMonsterGroup.scale.set(1, 1, 1), 100);
+
+                        if (monsterHp <= 0) {
+                            let rewardGold = (currentMonIndex + 1) * 50;
+                            gold += rewardGold;
+                            playSuccessSound();
+                            showNotification(`🏆 ${monsterTypes[currentMonIndex].name} 처치! +${rewardGold}G`);
+
+                            currentMonIndex = (currentMonIndex + 1) % monsterTypes.length;
+                            spawnMonster();
+                        }
+                        updateUI();
+                    }
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', (e) => { if (e.button === 2) isRightMouseDown = false; });
+        window.addEventListener('contextmenu', (e) => e.preventDefault());
+        window.addEventListener('mousemove', (e) => {
+            if (isRightMouseDown) {
+                let deltaX = e.clientX - previousMousePosition.x;
+                cameraAngle -= deltaX * 0.008;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        const keys = {};
+        window.addEventListener('keydown', (e) => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.code === 'Space' && !isJumping && gameStarted) {
+                playerVelocityY = 0.3;
+                isJumping = true;
+            }
+        });
+        window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
+
+        function updateUI() {
+            document.getElementById("player-hp").innerText = Math.max(0, playerHp);
+            document.getElementById("gold").innerText = gold;
+            document.getElementById("bag").innerText = bagCount;
+            document.getElementById("bag-max").innerText = bagMax;
+            document.getElementById("dmg").innerText = hammerDamage;
+            document.getElementById("target-title").innerText = objectTypes[currentObjIndex].name;
+            document.getElementById("hp").innerText = Math.max(0, objHp);
+            document.getElementById("hp-max").innerText = objMaxHp;
+        }
+
+        // 상점 업그레이드
+        document.getElementById("hammer-btn").addEventListener("click", () => {
+            initAudio();
+            if (hammerLevel >= 3) { showNotification("최고 단계 망치입니다!"); return; }
+            if (gold >= hammerCost) {
+                gold -= hammerCost;
+                hammerLevel++;
+                playBuySound();
+                if (hammerLevel === 2) {
+                    hammerDamage = 25; hammerCost = 500;
+                    showNotification("🔨 대형 망치 진화 완료!");
+                    document.getElementById("hammer-btn").innerText = "망치 강화 (500G)";
+                    hammerHeadMesh.scale.set(1.5, 1.8, 1.5);
+                    hammerHeadMesh.material.color.setHex(0xbdc3c7);
+                    playerBag.scale.set(1.3, 1.3, 1.3);
+                } else if (hammerLevel === 3) {
+                    hammerDamage = 60;
+                    showNotification("✨ 전설의 황금 망치 각성!");
+                    document.getElementById("hammer-btn").innerText = "망치 마스터";
+                    hammerHeadMesh.scale.set(2.0, 2.5, 2.0);
+                    hammerHeadMesh.material.color.setHex(0xf1c40f);
+                    playerBag.scale.set(1.6, 1.6, 1.6);
+                }
+                updateUI();
+            } else { showNotification("❌ 골드가 부족합니다!"); }
+        });
+
+        document.getElementById("bag-btn").addEventListener("click", () => {
+            initAudio();
+            if (bagLevel >= 3) { showNotification("가방이 최대 크기입니다!"); return; }
+            if (gold >= bagCost) {
+                gold -= bagCost;
+                bagLevel++;
+                playBuySound();
+                if (bagLevel === 2) {
+                    bagMax = 30; bagCost = 600;
+                    showNotification("🎒 중형 모험가 가방 확장!");
+                    document.getElementById("bag-btn").innerText = "가방 확장 (600G)";
+                } else if (bagLevel === 3) {
+                    bagMax = 100;
+                    showNotification("🎒 최고급 거대 배낭 마스터!");
+                    document.getElementById("bag-btn").innerText = "가방 최대";
+                }
+                updateUI();
+            } else { showNotification("❌ 골드가 부족합니다!"); }
+        });
+
+        // --- 메인 게임 루프 ---
+        let moveSpeed = 0.15;
+        let walkCycle = 0;
+        let monsterAttackTimer = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (!gameStarted) {
+                renderer.render(scene, camera);
+                return;
+            }
+
+            let moveX = 0, moveZ = 0;
+            if (keys['w'] || keys['arrowup']) moveZ -= 1;
+            if (keys['s'] || keys['arrowdown']) moveZ += 1;
+            if (keys['a'] || keys['arrowleft']) moveX -= 1;
+            if (keys['d'] || keys['arrowright']) moveX += 1;
+
+            if (moveX !== 0 || moveZ !== 0) {
+                let inputAngle = Math.atan2(moveX, moveZ);
+                let targetRotation = cameraAngle + inputAngle;
+                playerGroup.rotation.y = targetRotation;
+
+                let moveDirX = Math.sin(targetRotation);
+                let moveDirZ = Math.cos(targetRotation);
+
+                playerGroup.position.x += moveDirX * moveSpeed;
+                playerGroup.position.z += moveDirZ * moveSpeed;
+
+                walkCycle += 0.2;
+                leftLeg.rotation.x = Math.sin(walkCycle) * 0.5;
+                rightLeg.rotation.x = -Math.sin(walkCycle) * 0.5;
+                leftArm.rotation.x = -Math.sin(walkCycle) * 0.5;
+                rightArm.rotation.x = Math.sin(walkCycle) * 0.5;
+            } else {
+                leftLeg.rotation.x = 0; rightLeg.rotation.x = 0;
+                leftArm.rotation.x = 0; rightArm.rotation.x = 0;
+            }
+
+            if (isJumping) {
+                playerGroup.position.y += playerVelocityY;
+                playerVelocityY -= gravity;
+                if (playerGroup.position.y <= 0) {
+                    playerGroup.position.y = 0;
+                    isJumping = false;
+                    playerVelocityY = 0;
+                }
+            }
+
+            let targetCamX = playerGroup.position.x + Math.sin(cameraAngle) * cameraDist;
+            let targetCamZ = playerGroup.position.z + Math.cos(cameraAngle) * cameraDist;
+            camera.position.x += (targetCamX - camera.position.x) * 0.1;
+            camera.position.z += (targetCamZ - camera.position.z) * 0.1;
+            camera.position.y += (playerGroup.position.y + cameraHeight - camera.position.y) * 0.1;
+            camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1.5, playerGroup.position.z);
+
+            if (activeMonsterGroup) {
+                let mType = monsterTypes[currentMonIndex];
+                let mDist = activeMonsterGroup.position.distanceTo(playerGroup.position);
+                if (mDist > 2.5) {
+                    let mDirX = playerGroup.position.x - activeMonsterGroup.position.x;
+                    let mDirZ = playerGroup.position.z - activeMonsterGroup.position.z;
+                    let mLen = Math.sqrt(mDirX * mDirX + mDirZ * mDirZ);
+                    activeMonsterGroup.position.x += (mDirX / mLen) * mType.speed;
+                    activeMonsterGroup.position.z += (mDirZ / mLen) * mType.speed;
+                } else {
+                    monsterAttackTimer++;
+                    if (monsterAttackTimer > 60) {
+                        playerHp -= (currentMonIndex + 1) * 10;
+                        playHitSound();
+                        showNotification(`💥 ${mType.name}에게 공격당했습니다!`);
+                        updateUI();
+                        monsterAttackTimer = 0;
+                        if (playerHp <= 0) {
+                            alert("체력이 다 닳았습니다! 부활합니다.");
+                            playerHp = 100;
+                            playerGroup.position.set(0, 0, 10);
+                            updateUI();
+                        }
+                    }
+                }
+                if (mHpFg) mHpFg.scale.x = Math.max(0, monsterHp / monsterMaxHp);
+            }
+
+            if (playerGroup.position.distanceTo(sellZone.position) < 5 && bagCount > 0) {
+                let earned = bagCount * 15;
+                gold += earned;
+                playBuySound();
+                showNotification(`💰 상점 판매 완료! +${earned}G`);
+                bagCount = 0;
+                updateUI();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        updateUI();
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
